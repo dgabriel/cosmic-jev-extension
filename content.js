@@ -75,7 +75,10 @@
     body.textContent = response.reason;
     popover.appendChild(body);
 
-    const detailBits = [details.when, details.where, details.price, details.tags && details.tags.join(", ")].filter(Boolean);
+    const ruledBy = response.kind === "verdict" ? `Ruled by ${response.category}` : null;
+    const detailBits = [ruledBy, details.when, details.where, details.price, details.tags && details.tags.join(", ")].filter(
+      Boolean,
+    );
     if (detailBits.length > 0) {
       const detailsLine = document.createElement("div");
       detailsLine.className = "cosmic-jev-popover-details";
