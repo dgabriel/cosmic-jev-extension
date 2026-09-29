@@ -97,8 +97,6 @@ Decisions from review:
 3. **Astrology fidelity**: real ephemeris, as proposed — confirmed as "where I want the meat of the app to be."
 4. **Repo visibility**: public.
 
-### One remaining real blocker: Worker CORS
+### Worker CORS — resolved
 
-This extension's manifest pins its own key, giving it a fixed ID: **`pgnpdafilefemmcjhpbpnafepjkhfgon`**. Verified live against the deployed Worker: it currently returns `403 origin_not_allowed` for this ID, exactly as expected, since `cosmic-oracle/worker/wrangler.toml`'s `ALLOWED_ORIGINS` only lists the *original* extension's ID. Every other part of the pipeline (content script -> background -> Worker call -> glow) was confirmed working end-to-end up to that point.
-
-Fixing this requires a small change **in the other repo** (`cosmic-oracle`) — adding `chrome-extension://pgnpdafilefemmcjhpbpnafepjkhfgon` to `ALLOWED_ORIGINS` and running `npx wrangler deploy` — which this repo's own changes can't do on their own. Flagged rather than done silently, since it's a live production deploy of a different project.
+This extension's manifest pins its own key, giving it a fixed ID: **`pgnpdafilefemmcjhpbpnafepjkhfgon`**. It initially got `403 origin_not_allowed` from the deployed Worker, since `cosmic-oracle/worker/wrangler.toml`'s `ALLOWED_ORIGINS` only listed the *original* extension's ID. Fixed with the project owner's explicit go-ahead: added this ID to `ALLOWED_ORIGINS` in the `cosmic-oracle` repo and ran `npx wrangler deploy` there. Confirmed live afterward: this extension's origin now gets a real Jev response, and the original extension's origin still works unaffected.
