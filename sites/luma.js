@@ -24,11 +24,23 @@
  * ("By <name>"), or a known status word ("Near Capacity" etc.) --
  * best-effort, since Luma doesn't mark location with any distinct attribute
  * on either template. No price or tags are shown on a Luma card.
+ *
+ * lu.ma/discover also has a third card kind: its "Featured Calendars"
+ * section (recurring communities/organizers to follow, not one-off events --
+ * confirmed via that exact section heading, live-inspected). Verified
+ * structurally distinct from an event card: the card itself IS the anchor
+ * (`a.content-card.flex-column`, href suffixed `?k=c` for "kind=calendar"),
+ * containing a "Follow" button `<div>`, the calendar's name `<div>`, a
+ * location `<span>`, a "·" separator `<span>`, and a description `<span>`.
+ * Scored the same way as an event: the calendar's name is the activity
+ * text, its description (if present) goes in `tags` since it's the closest
+ * fit and gives Jev real context beyond the bare name.
  */
 (function () {
   "use strict";
 
   const LINK_SELECTOR = "a.event-link";
+  const CALENDAR_SELECTOR = "a.content-card.flex-column";
   const TIME_PATTERN = /\d{1,2}:\d{2}\s*(AM|PM)/i;
   const STATUS_WORDS = new Set(["Near Capacity", "Waitlist", "Sold Out", "Just Added"]);
 
@@ -37,10 +49,34 @@
     for (const link of doc.querySelectorAll(LINK_SELECTOR)) {
       cards.add(link.closest(".content-card") || link.parentElement);
     }
+    for (const calendarCard of doc.querySelectorAll(CALENDAR_SELECTOR)) {
+      cards.add(calendarCard);
+    }
     return [...cards].filter(Boolean);
   }
 
+  function detailsForCalendar(card) {
+    const divs = [...card.querySelectorAll("div")]
+      .filter((d) => d.children.length === 0)
+      .map((d) => d.textContent.trim())
+      .filter(Boolean);
+    const title = divs.find((text) => !/^follow(ing)?$/i.test(text)) || null;
+    if (!title) return null;
+
+    const spans = [...card.querySelectorAll("span")]
+      .map((s) => s.textContent.trim())
+      .filter((text) => text && text !== "·");
+    const where = spans[0] || null;
+    const description = spans.length > 1 ? spans[spans.length - 1] : null;
+
+    return { title, when: null, where, price: null, tags: description && description !== where ? [description] : null };
+  }
+
   function detailsFor(card) {
+    if (card.matches(CALENDAR_SELECTOR)) {
+      return detailsForCalendar(card);
+    }
+
     const link = card.querySelector(LINK_SELECTOR);
     const rawLabel = link ? link.getAttribute("aria-label") : null;
     const title = rawLabel ? rawLabel.trim() || null : null;
