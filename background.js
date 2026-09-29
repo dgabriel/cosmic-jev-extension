@@ -37,10 +37,38 @@ function route(classification) {
   };
 }
 
+/**
+ * The deadpan explanation sentence shown in the badge's hover popover, in
+ * the same spirit as cosmic-jev's src/explain.ts (trimmed to what this
+ * extension actually has: no ambiguity/disclaimer wording, since this repo
+ * has no birth-time-based ambiguity concept -- see astro/natal.js).
+ */
+function describeAspects(aspects) {
+  const parts = aspects.map((a) => `${a.aspect} your natal ${a.natal}`);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return `, ${parts[0]}`;
+  return `, ${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+function explainVerdict(category, rulingBodyTransit, aspects, favor) {
+  const motion = rulingBodyTransit.retrograde ? "retrograde" : "direct";
+  const verdictWord = favor >= 0.5 ? "endorses" : "is skeptical of";
+  return (
+    `Ruled by ${category}. ${category} is ${motion} in ${rulingBodyTransit.sign}${describeAspects(aspects)}. ` +
+    `The cosmos ${verdictWord} this (p = ${favor.toFixed(2)}).`
+  );
+}
+
+const REASON_FOR_KIND = {
+  recusal: "The stars recommend therapy for this one.",
+  "needs-detail": "Too vague to categorize -- Jev needs more detail.",
+  "no-birthdate": "Set your birthdate in the extension popup to get a real verdict.",
+};
+
 async function scoreEvent(title) {
   const birthdate = await Storage.loadBirthdate();
   if (!birthdate) {
-    return { kind: "no-birthdate" };
+    return { kind: "no-birthdate", reason: REASON_FOR_KIND["no-birthdate"] };
   }
 
   try {
@@ -53,7 +81,7 @@ async function scoreEvent(title) {
     const decision = route(classification);
 
     if (decision.kind === "recusal" || decision.kind === "needs-detail") {
-      return { kind: decision.kind };
+      return { kind: decision.kind, reason: REASON_FOR_KIND[decision.kind] };
     }
 
     const rulingBodyTransit = transits.bodies[decision.category];
@@ -66,9 +94,15 @@ async function scoreEvent(title) {
       activityText: title,
     });
 
-    return { kind: "verdict", favor: verdict.favor, intensity: verdict.intensity };
+    return {
+      kind: "verdict",
+      favor: verdict.favor,
+      intensity: verdict.intensity,
+      category: decision.category,
+      reason: explainVerdict(decision.category, rulingBodyTransit, aspects, verdict.favor),
+    };
   } catch (error) {
-    return { kind: "error", message: error instanceof Error ? error.message : "Unknown error" };
+    return { kind: "error", reason: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 

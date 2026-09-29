@@ -17,6 +17,12 @@
  * needs-detail, no saved birthdate, or a call failure -- Jev's opinion is
  * unknown, not a specific yes/no). See content.css's .cosmic-jev-badge and
  * manifest.json's web_accessible_resources.
+ *
+ * Hovering the badge shows a popover with the category (a verdict's ruling
+ * body, e.g. "Venus") and the reason -- background.js's deadpan explanation
+ * sentence for a verdict, or a short fixed reason for anything else. One
+ * shared popover element is reused across all cards rather than creating one
+ * per card, repositioned and refilled on each hover.
  */
 (function () {
   "use strict";
@@ -45,7 +51,42 @@
     return response.favor >= 0.5 ? "icons/brownie-check-small.png" : "icons/brownie-x-small.png";
   }
 
-  function setBadge(card, iconPath) {
+  let popoverEl = null;
+  function getPopover() {
+    if (!popoverEl) {
+      popoverEl = document.createElement("div");
+      popoverEl.className = "cosmic-jev-popover";
+      document.body.appendChild(popoverEl);
+    }
+    return popoverEl;
+  }
+
+  function showPopover(badge, response) {
+    const popover = getPopover();
+    popover.textContent = "";
+
+    const heading = document.createElement("div");
+    heading.className = "cosmic-jev-popover-category";
+    heading.textContent = response.kind === "verdict" ? response.category : "Unknown";
+    popover.appendChild(heading);
+
+    const body = document.createElement("div");
+    body.className = "cosmic-jev-popover-reason";
+    body.textContent = response.reason;
+    popover.appendChild(body);
+
+    const rect = badge.getBoundingClientRect();
+    popover.style.display = "block";
+    const popoverWidth = popover.offsetWidth;
+    popover.style.top = `${rect.bottom + 6}px`;
+    popover.style.left = `${Math.max(6, rect.right - popoverWidth)}px`;
+  }
+
+  function hidePopover() {
+    if (popoverEl) popoverEl.style.display = "none";
+  }
+
+  function setBadge(card, iconPath, response) {
     let badge = card.querySelector(":scope > .cosmic-jev-badge");
     if (!iconPath) {
       if (badge) badge.remove();
@@ -61,6 +102,8 @@
       }
       badge = document.createElement("img");
       badge.className = "cosmic-jev-badge";
+      badge.addEventListener("mouseenter", () => showPopover(badge, response));
+      badge.addEventListener("mouseleave", hidePopover);
       card.appendChild(badge);
     }
     badge.src = chrome.runtime.getURL(iconPath);
@@ -74,7 +117,7 @@
       resultCache.set(title, response);
     }
     setGlow(card, glowForResponse(response));
-    setBadge(card, badgeIconForResponse(response));
+    setBadge(card, badgeIconForResponse(response), response);
   }
 
   const observer = new IntersectionObserver(
