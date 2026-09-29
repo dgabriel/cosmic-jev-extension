@@ -14,3 +14,14 @@
   outline: 2px dashed rgba(150, 150, 150, 0.6) !important;
   outline-offset: 2px !important;
 }
+
+/* Brownie badge: top-right corner of the card, 5px padding from the edge. */
+.cosmic-jev-badge {
+  position: absolute !important;
+  top: 5px !important;
+  right: 5px !important;
+  width: 48px !important;
+  height: auto !important;
+  z-index: 2147483647 !important;
+  pointer-events: none !important;
+}

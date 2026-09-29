@@ -53,5 +53,20 @@
     "https://confs.tech/*",
     "https://cosmic-oracle-worker.cosmic-oracle.workers.dev/*"
   ],
-  "permissions": ["storage"]
+  "permissions": ["storage"],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/brownie-check-small.png",
+        "icons/brownie-x-small.png",
+        "icons/brownie-question-small.png"
+      ],
+      "matches": [
+        "https://www.eventbrite.com/*",
+        "https://www.meetup.com/*",
+        "https://lu.ma/*",
+        "https://confs.tech/*"
+      ]
+    }
+  ]
 }
