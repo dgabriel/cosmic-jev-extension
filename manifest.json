@@ -22,27 +22,56 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.eventbrite.com/*"],
-      "js": ["sites/eventbrite.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://www.eventbrite.com/*"
+      ],
+      "js": [
+        "sites/eventbrite.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.meetup.com/*"],
-      "js": ["sites/meetup.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://www.meetup.com/*"
+      ],
+      "js": [
+        "sites/meetup.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://lu.ma/*"],
-      "js": ["sites/luma.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://lu.ma/*",
+        "https://luma.com/*"
+      ],
+      "js": [
+        "sites/luma.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://confs.tech/*"],
-      "js": ["sites/confstech.js", "content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://confs.tech/*"
+      ],
+      "js": [
+        "sites/confstech.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -50,10 +79,13 @@
     "https://www.eventbrite.com/*",
     "https://www.meetup.com/*",
     "https://lu.ma/*",
+    "https://luma.com/*",
     "https://confs.tech/*",
     "https://cosmic-oracle-worker.cosmic-oracle.workers.dev/*"
   ],
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "web_accessible_resources": [
     {
       "resources": [
@@ -65,6 +97,7 @@
         "https://www.eventbrite.com/*",
         "https://www.meetup.com/*",
         "https://lu.ma/*",
+        "https://luma.com/*",
         "https://confs.tech/*"
       ]
     }
