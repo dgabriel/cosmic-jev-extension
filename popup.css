@@ -1,0 +1,31 @@
+body {
+  font-family: system-ui, sans-serif;
+  width: 220px;
+  padding: 12px;
+  margin: 0;
+}
+
+h1 {
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+label {
+  font-size: 0.85rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+#status {
+  font-size: 0.8rem;
+  color: #666;
+  min-height: 1em;
+}

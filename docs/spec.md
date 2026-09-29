@@ -8,14 +8,14 @@ This repo is **just the extension**. No React (the original didn't use it either
 
 ## Sites supported
 
-1. **Eventbrite** (eventbrite.com)
-2. **Meetup** (meetup.com)
-3. **Luma** (lu.ma) — picked as the third site: a popular, comparatively simple indie/tech-event listing site.
-4. **10times** (10times.com) — picked as the fourth: a global conference/trade-show listing site, to cover "conference listing" specifically rather than just meetups.
+1. **Eventbrite** (eventbrite.com) — card: `section.discover-vertical-event-card`; title: `a.event-card-link`'s `aria-label`, stripped of its "View " prefix.
+2. **Meetup** (meetup.com) — card: `[data-testid="categoryResults-eventCard"]`; title: the card's `<h3>` text (falls back to its image's `alt`).
+3. **Luma** (lu.ma) — card: `.content-card`; title: the nested `a.event-link`'s `aria-label`.
+4. **confs.tech** — swapped in for the originally-proposed **10times.com**: 10times sits behind a Cloudflare bot check that returned "Just a moment..." to every inspection attempt, headless and headful alike, so its real selectors could not be verified without guessing them, which this project's own rule (and this repo's, by inheritance) forbids. confs.tech is a plain, crowd-sourced tech-conference listing site with no such gate. Card: `li[class^="ConferenceItem_ConferenceItem"]` — confs.tech has no `data-testid` or other non-hashed marker anywhere on the page, so this matches a CSS-module class by *prefix* rather than its exact (build-hashed) suffix, since CSS Modules conventionally keep that prefix stable across rebuilds even as the hash changes. Title: the first `a[href^="http"]` inside the card.
 
-(2 and 3 are my picks per your ask — swap either out if you'd rather have something else.)
+All four selectors above were found by live-inspecting each real site's rendered DOM (Playwright), not guessed and not read from a static/markdown fetch (which cannot see real attributes at all) — the same standard the original extension's Eventbrite selectors were held to. Each site's adapter file carries this same detail in its own header comment, plus the specific verification note for confs.tech's prefix-match tradeoff.
 
-Each site gets one small adapter file: "how to find event cards on this page" + "how to read this card's title out of it." Nothing else about a site is special-cased. **Exact CSS selectors are not guessed here** — per this project's own established rule, they get found by live-inspecting each real site's DOM during implementation, the same way the first extension's Eventbrite selectors were found. This spec fixes the *shape* of an adapter, not selector strings.
+Each site gets one small adapter file: "how to find event cards on this page" + "how to read this card's title out of it." Nothing else about a site is special-cased.
 
 ## How it works, end to end
 
@@ -87,15 +87,18 @@ cosmic-jev-extension/
 
 No `package.json` is required to *load or run* the extension — clone the repo, load `cosmic-jev-extension/` unpacked, done. (One may still get added later purely for optional dev conveniences like a formatter, but it's not part of the runtime path.)
 
-## Cross-repo dependency (flagging now, not at the end)
+## Implementation status (post-review)
 
-The existing Worker's `ALLOWED_ORIGINS` allowlist only contains the *original* extension's pinned ID. This extension gets its own fresh, stable manifest `"key"` (a new, different ID), so before real-Jev calls will work from it, `cosmic-oracle/worker/wrangler.toml` needs that new ID added and redeployed — a small change in the *other* repo, same as when the first extension was added. Not blocking spec review, just flagging it as a real step in the implementation plan rather than a surprise at the end.
+Built per the decisions below. Verified: `npm test` (the smoke script) passes 12/12 checks against real cited reference values; a live Playwright load of the actual unpacked extension confirms the background service worker starts cleanly, the popup saves/reloads a birthdate correctly, and the Eventbrite content script correctly finds all cards and calls through to the background worker for a real verdict.
 
-## Open questions for your review
+Decisions from review:
+1. **Test strategy**: (b) — a tiny, framework-free Node smoke script (`test/smoke.js`), reusing the exact same cited reference values (Wikipedia's March 2024 equinox; Cafe Astrology's Mercury retrograde calendar) already verified in the main `cosmic-jev` repo's `src/sky.reference.test.ts`.
+2. **Sites**: Luma confirmed; 10times swapped for confs.tech (see "Sites supported" above for why).
+3. **Astrology fidelity**: real ephemeris, as proposed — confirmed as "where I want the meat of the app to be."
+4. **Repo visibility**: public.
 
-1. **Test strategy.** Options: (a) none at all — fits "no over-engineering" literally; (b) one tiny, framework-free Node smoke script that checks `astro/*.js`'s output against a couple of known reference values, run by hand (not CI). I'd lean (b): the astrology math is the one part that's silently wrong if it's wrong, and a handful of plain assertions costs almost nothing. Your call.
-2. **The two extra sites** — Luma and 10times, or something else?
-3. **Astrology fidelity** — real ephemeris (as proposed above) vs. going even simpler (Sun-sign-only, from a static date-range table, no vendored library at all)? I think real ephemeris is worth the small amount of code it costs, but flagging the alternative since you emphasized "simplest possible."
-4. **Repo visibility** — created public (matching `cosmic-jev`'s own visibility). Say so if you'd rather it be private.
+### One remaining real blocker: Worker CORS
 
-Nothing beyond this document has been written yet. Once you're happy with the shape of this, I'll implement it.
+This extension's manifest pins its own key, giving it a fixed ID: **`pgnpdafilefemmcjhpbpnafepjkhfgon`**. Verified live against the deployed Worker: it currently returns `403 origin_not_allowed` for this ID, exactly as expected, since `cosmic-oracle/worker/wrangler.toml`'s `ALLOWED_ORIGINS` only lists the *original* extension's ID. Every other part of the pipeline (content script -> background -> Worker call -> glow) was confirmed working end-to-end up to that point.
+
+Fixing this requires a small change **in the other repo** (`cosmic-oracle`) — adding `chrome-extension://pgnpdafilefemmcjhpbpnafepjkhfgon` to `ALLOWED_ORIGINS` and running `npx wrangler deploy` — which this repo's own changes can't do on their own. Flagged rather than done silently, since it's a live production deploy of a different project.

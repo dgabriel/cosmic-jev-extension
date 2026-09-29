@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Cosmic JEV Extension",
+  "version": "0.1.0",
+  "description": "Glows event cards green or red across Eventbrite, Meetup, Luma, and confs.tech based on what Jev thinks of attending, from your real birth chart.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv2RwLLcoDtxfCekF/qRiO9ACp8ndV2oEHLt9kvgDux1887k09aoxJI58g9/Uzja6G4Z8LiAlBh1+Q2sRR+t0IBgM6De4N8gVZSdyTfCMH1Iwq2+gpnl2WW35t+7M3LNgteEDUEBOUt2HfmPf45bO5DO/1cH6L8Urk/elnjZxV79717qQXEqXNY8MGOgMvC5XLMILLJirw9xlChGmAKUpIRFbJ/Vx/D3UZdq1lfu4InLxG4yA3FiCbVKRhuJnd3B4er1eFCfex6S+FNKZX+aR6hDudU2xc7ZMspv9vwxILO7F5cfTquRLcizlsz+Oz83E+MSrkmP64YZZRzTq8IrkOwIDAQAB",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.eventbrite.com/*"],
+      "js": ["sites/eventbrite.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.meetup.com/*"],
+      "js": ["sites/meetup.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://lu.ma/*"],
+      "js": ["sites/luma.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://confs.tech/*"],
+      "js": ["sites/confstech.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://www.eventbrite.com/*",
+    "https://www.meetup.com/*",
+    "https://lu.ma/*",
+    "https://confs.tech/*",
+    "https://cosmic-oracle-worker.cosmic-oracle.workers.dev/*"
+  ],
+  "permissions": ["storage"]
+}

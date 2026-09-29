@@ -1,0 +1,12 @@
+{
+  "name": "cosmic-jev-extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Simplified extension-only spin-off of Cosmic JEV. No build step to load the extension itself -- see README.md. This package.json exists only for the optional dev smoke test.",
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "devDependencies": {
+    "astronomy-engine": "^2.1.19"
+  }
+}
