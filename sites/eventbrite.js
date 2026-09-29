@@ -7,15 +7,18 @@
  * a `/d/{location}/events/` search page.
  *
  * Title source: a plain `<h3>` inside the card, present with the correct
- * text on both page templates. An earlier version of this file read the
- * title link's `aria-label` instead ("View <title>") -- that worked on a
- * search page, but on the plain eventbrite.com homepage every card's
- * aria-label is a literal, un-interpolated template string
- * ("View {eventName}"), a real bug on Eventbrite's own end, not a timing
- * issue (confirmed it doesn't resolve even after a 10s wait). The `<h3>`
- * always has the real, correct text on both templates, and depends on no
- * class name at all -- switched to it entirely rather than adding a
- * fallback for the broken case.
+ * text on both page templates (see git history for why -- an earlier
+ * aria-label-based version broke on the homepage, where Eventbrite ships a
+ * literal un-interpolated "View {eventName}" template string, a bug on
+ * their end).
+ *
+ * When/where/price: the h3's nearest ancestor `<a>` is followed by two
+ * `<p>` siblings (date, then venue) and then a price `<div>` (sometimes
+ * after an empty `<span>`) -- confirmed structurally consistent across many
+ * real cards regardless of the surrounding hashed CSS-module classes, which
+ * is why this walks siblings by position/tag rather than matching a class.
+ * No per-card tags/category are shown on an Eventbrite card, so `tags` is
+ * always null here.
  */
 (function () {
   "use strict";
@@ -26,10 +29,31 @@
     return [...doc.querySelectorAll(CARD_SELECTOR)];
   }
 
-  function titleFor(card) {
-    const heading = card.querySelector("h3");
-    return heading ? heading.textContent.trim() || null : null;
+  function textOrNull(el) {
+    if (!el) return null;
+    const text = el.textContent.trim();
+    return text || null;
   }
 
-  window.CosmicJevAdapter = { findCards, titleFor };
+  function detailsFor(card) {
+    const h3 = card.querySelector("h3");
+    const title = textOrNull(h3);
+    if (!title) return null;
+
+    const anchor = h3.closest("a");
+    const dateEl = anchor ? anchor.nextElementSibling : null;
+    const venueEl = dateEl ? dateEl.nextElementSibling : null;
+    let priceEl = venueEl ? venueEl.nextElementSibling : null;
+    if (priceEl && priceEl.tagName === "SPAN") priceEl = priceEl.nextElementSibling;
+
+    return {
+      title,
+      when: textOrNull(dateEl),
+      where: textOrNull(venueEl),
+      price: textOrNull(priceEl),
+      tags: null,
+    };
+  }
+
+  window.CosmicJevAdapter = { findCards, detailsFor };
 })();

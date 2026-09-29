@@ -5,9 +5,23 @@
  * repo's worker/handler.ts). Loaded into background.js via importScripts --
  * this is the only file in this extension that touches the network.
  *
- * Question/criteria wording is copied verbatim from the main repo's
- * src/oracle-jev.ts (itself transcribed from docs/jev-openrouter.md /
- * docs/spec.md) -- not reinvented here.
+ * Call 1 (classify) question wording is copied verbatim from the main
+ * repo's src/oracle-jev.ts. Call 2 (verdict) has been deliberately made
+ * richer than the main repo's version, for a demo of how complex a decision
+ * Jev can make (cost is not a concern here):
+ *  - state carries the full natal + transit positions for all 7 bodies (not
+ *    just the pre-selected ruling body) and the full aspect list (not
+ *    filtered to just that body), plus whatever event details (when/where/
+ *    price/tags) the page actually had -- Jev gets the whole chart and the
+ *    whole event, not a pre-narrowed slice of either.
+ *  - `category` is deliberately NOT sent to Call 2: Call 1 already picked
+ *    one for our own routing (see background.js's `route()`), but Call 2
+ *    doesn't hint Jev toward it -- it has to find its own relevance in the
+ *    full chart.
+ *  - `favor` is now a graded Score (7 levels) instead of a single Noul, and
+ *    two more independent Nouls ask a genuinely different question each:
+ *    `timingFit` (is *today* auspicious) vs `chartFit` (does this activity
+ *    suit this person's chart *in general*, regardless of today).
  *
  * Unlike the main repo's JevOracle, this throws one plain Error for any
  * failure (network, non-2xx, malformed body) rather than a taxonomy of typed
@@ -55,6 +69,17 @@
     "An overwhelming cosmic surge",
   ];
 
+  /** Graded replacement for a single favor Noul -- more resolution than a binary probability. */
+  const FAVOR_LEVELS = [
+    "The stars strongly oppose this",
+    "The stars lean against this",
+    "The stars are mildly skeptical of this",
+    "The stars are neutral on this",
+    "The stars are mildly supportive of this",
+    "The stars lean toward this",
+    "The stars strongly favor this",
+  ];
+
   function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
   }
@@ -84,9 +109,10 @@
     return json.answers;
   }
 
-  async function classifyActivity(activityText) {
+  /** `details`: `{ title, when, where, price, tags }`, whatever the page's adapter could find. */
+  async function classifyActivity(details) {
     const answers = await decide({
-      state: activityText,
+      state: details,
       questions: {
         category: { type: "choice", instructions: "Which celestial body rules this activity?", criteria: CATEGORY_CRITERIA },
         sensitivity: {
@@ -114,17 +140,33 @@
     return { category: category.choice, sensitivity: sensitivity.choice, vague: vague.noul };
   }
 
+  /**
+   * `input`: `{ event: {title, when, where, price, tags}, natal: {Sun: BodyPosition, ...all 7},
+   * transits: {Sun: BodyPosition, ...all 7}, aspects: Aspect[] (unfiltered), moonPhase }`.
+   */
   async function getVerdict(input) {
     const answers = await decide({
       state: {
-        category: input.category,
-        rulingBodyTransit: input.rulingBodyTransit,
+        event: input.event,
+        natal: input.natal,
+        transits: input.transits,
         aspects: input.aspects,
         moonPhase: input.moonPhase,
-        activityText: input.activityText,
       },
       questions: {
-        favor: { type: "noul", instructions: "Do the stars favor this activity for this person today?" },
+        favor: {
+          type: "score",
+          instructions: "Weighing this person's full natal chart against today's full transits, do the stars favor this activity?",
+          criteria: FAVOR_LEVELS,
+        },
+        timingFit: {
+          type: "noul",
+          instructions: "Independent of whether this activity generally suits this person, is TODAY specifically an auspicious day for it?",
+        },
+        chartFit: {
+          type: "noul",
+          instructions: "Independent of today's specific timing, does this activity generally align with this person's natal chart?",
+        },
         intensity: {
           type: "score",
           instructions: "How intense are today's cosmic influences on this activity?",
@@ -134,12 +176,23 @@
     });
 
     const favor = answers.favor;
+    const timingFit = answers.timingFit;
+    const chartFit = answers.chartFit;
     const intensity = answers.intensity;
-    if (!isRecord(favor) || typeof favor.noul !== "number" || !isRecord(intensity) || typeof intensity.score !== "number") {
+    if (
+      !isRecord(favor) || typeof favor.score !== "number" ||
+      !isRecord(timingFit) || typeof timingFit.noul !== "number" ||
+      !isRecord(chartFit) || typeof chartFit.noul !== "number" ||
+      !isRecord(intensity) || typeof intensity.score !== "number"
+    ) {
       throw new Error("Oracle sent back an unexpected verdict shape.");
     }
-    const normalizedIntensity = Math.min(1, Math.max(0, intensity.score / (INTENSITY_LEVELS.length - 1)));
-    return { favor: favor.noul, intensity: normalizedIntensity };
+    return {
+      favor: Math.min(1, Math.max(0, favor.score / (FAVOR_LEVELS.length - 1))),
+      timingFit: timingFit.noul,
+      chartFit: chartFit.noul,
+      intensity: Math.min(1, Math.max(0, intensity.score / (INTENSITY_LEVELS.length - 1))),
+    };
   }
 
   root.OracleClient = { classifyActivity, getVerdict };

@@ -92,7 +92,7 @@ function checkRange(name, actual, min, maxExclusive) {
 
   const transits = Sky.computeTransitChart(new Date("2024-04-10T00:00:00Z"));
   const aspects = Aspects.computeAspects(transits, natal);
-  check("every returned aspect is within its own orb", aspects.every((a) => a.orb <= 3), true);
+  check("every returned aspect is within its own orb", aspects.every((a) => a.orb <= 6), true);
   check(
     "every returned aspect is to the natal Sun or Moon only",
     aspects.every((a) => a.natal === "Sun" || a.natal === "Moon"),

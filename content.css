@@ -45,3 +45,11 @@
   font-weight: 700;
   margin-bottom: 4px;
 }
+
+.cosmic-jev-popover-details {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cfcfcf;
+  font-size: 12px;
+}

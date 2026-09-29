@@ -18,10 +18,13 @@
 
   const ASPECT_ANGLES = { conjunction: 0, sextile: 60, square: 90, trine: 120, opposition: 180 };
 
-  // Transit-to-natal-point orbs (tighter than a natal-to-natal orb would be,
-  // so a fast body like the Moon doesn't read "in aspect" for days). See the
-  // original aspects.ts for the full rationale; unchanged here.
-  const ASPECT_ORBS = { conjunction: 3, opposition: 3, square: 2, trine: 2, sextile: 1 };
+  // Transit-to-natal-point orbs. Widened to 2x the original cosmic-jev
+  // values (conjunction/opposition: 3->6, square/trine: 2->4, sextile: 1->2)
+  // so more aspects actually show up per request -- for this demo, more
+  // signal for Jev to reason about is worth more than the tighter orb's
+  // precision. Still comfortably under half the 60deg minimum gap between
+  // aspect angles, so no two aspect types can ever overlap into ambiguity.
+  const ASPECT_ORBS = { conjunction: 6, opposition: 6, square: 4, trine: 4, sextile: 2 };
 
   const TWENTY_FOUR_HOURS_MILLIS = 24 * 60 * 60 * 1000;
 

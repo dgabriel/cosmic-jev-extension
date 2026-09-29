@@ -61,7 +61,7 @@
     return popoverEl;
   }
 
-  function showPopover(badge, response) {
+  function showPopover(badge, response, details) {
     const popover = getPopover();
     popover.textContent = "";
 
@@ -75,6 +75,14 @@
     body.textContent = response.reason;
     popover.appendChild(body);
 
+    const detailBits = [details.when, details.where, details.price, details.tags && details.tags.join(", ")].filter(Boolean);
+    if (detailBits.length > 0) {
+      const detailsLine = document.createElement("div");
+      detailsLine.className = "cosmic-jev-popover-details";
+      detailsLine.textContent = detailBits.join(" · ");
+      popover.appendChild(detailsLine);
+    }
+
     const rect = badge.getBoundingClientRect();
     popover.style.display = "block";
     const popoverWidth = popover.offsetWidth;
@@ -86,7 +94,7 @@
     if (popoverEl) popoverEl.style.display = "none";
   }
 
-  function setBadge(card, iconPath, response) {
+  function setBadge(card, iconPath, response, details) {
     let badge = card.querySelector(":scope > .cosmic-jev-badge");
     if (!iconPath) {
       if (badge) badge.remove();
@@ -102,22 +110,22 @@
       }
       badge = document.createElement("img");
       badge.className = "cosmic-jev-badge";
-      badge.addEventListener("mouseenter", () => showPopover(badge, response));
+      badge.addEventListener("mouseenter", () => showPopover(badge, response, details));
       badge.addEventListener("mouseleave", hidePopover);
       card.appendChild(badge);
     }
     badge.src = chrome.runtime.getURL(iconPath);
   }
 
-  async function scoreCard(card, title) {
+  async function scoreCard(card, details) {
     setGlow(card, "cosmic-jev-glow-pending");
-    let response = resultCache.get(title);
+    let response = resultCache.get(details.title);
     if (!response) {
-      response = await chrome.runtime.sendMessage({ type: "SCORE_EVENT", title });
-      resultCache.set(title, response);
+      response = await chrome.runtime.sendMessage({ type: "SCORE_EVENT", ...details });
+      resultCache.set(details.title, response);
     }
     setGlow(card, glowForResponse(response));
-    setBadge(card, badgeIconForResponse(response), response);
+    setBadge(card, badgeIconForResponse(response), response, details);
   }
 
   const observer = new IntersectionObserver(
@@ -125,8 +133,8 @@
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         observer.unobserve(entry.target);
-        const title = adapter.titleFor(entry.target);
-        if (title) scoreCard(entry.target, title);
+        const details = adapter.detailsFor(entry.target);
+        if (details) scoreCard(entry.target, details);
       }
     },
     { rootMargin: "200px" },
