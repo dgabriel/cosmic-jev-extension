@@ -100,6 +100,38 @@ function checkRange(name, actual, min, maxExclusive) {
   );
 }
 
+// Luma event-page description extraction (lumaDescription.js). Fixtures are
+// trimmed copies of the shapes seen on live pages (luma.com/warp-yb7x,
+// luma.com/juntodinnersep30, 2026-09-30): the __NEXT_DATA__ description_mirror
+// doc, and the truncated meta description fallback.
+{
+  const { extractLumaDescription, MAX_DESCRIPTION_CHARS } = require("../lumaDescription.js");
+  const nextData = {
+    props: {
+      pageProps: {
+        initialData: {
+          data: {
+            description_mirror: {
+              type: "doc",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "Wine and " }, { type: "text", text: "poker", marks: [{ type: "bold" }] }, { type: "text", text: " night." }] },
+                { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "\u200b\u200bWhat to expect:" }] },
+                { type: "bullet_list", content: [{ type: "list_item", content: [{ type: "paragraph", content: [{ type: "text", text: "Cards" }] }] }] },
+              ],
+            },
+          },
+        },
+      },
+    },
+  };
+  const page = `<meta name="description" content="Short &amp; truncated…"/><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script>`;
+  check("luma: full description from __NEXT_DATA__, one line per block", extractLumaDescription(page), "Wine and poker night.\nWhat to expect:\nCards");
+  check("luma: falls back to the meta description", extractLumaDescription(`<meta name="description" content="Wine &amp; poker &quot;night&quot;…">`), 'Wine & poker "night"…');
+  check("luma: null when the page has neither", extractLumaDescription("<html></html>"), null);
+  const longPage = `<meta name="description" content="${"x".repeat(5000)}">`;
+  check("luma: long descriptions are capped", extractLumaDescription(longPage).length, MAX_DESCRIPTION_CHARS);
+}
+
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);
   process.exit(1);

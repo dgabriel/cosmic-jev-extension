@@ -25,6 +25,7 @@ importScripts(
   "astro/aspects.js",
   "storage.js",
   "oracleClient.js",
+  "lumaDescription.js",
 );
 
 const VAGUE_THRESHOLD = 0.75; // matches cosmic-jev's src/oracle.ts
@@ -76,12 +77,47 @@ const REASON_FOR_KIND = {
   "no-birthdate": "Set your birthdate in the extension popup to get a real verdict.",
 };
 
-/** `details`: `{ title, when, where, price, tags }` from the page's site adapter. */
-async function scoreEvent(details) {
+const DESCRIPTION_FETCH_TIMEOUT_MS = 5000;
+const LUMA_HOSTS = new Set(["lu.ma", "luma.com"]);
+
+/**
+ * Swaps an adapter's `detailUrl` for the event's real `description`, fetched
+ * from its own page (Luma only, for now -- see lumaDescription.js). Best
+ * effort: any failure (offline, timeout, page changed shape) just scores the
+ * event without a description, the way it always used to. `detailUrl` is
+ * never forwarded to Jev; it's a fetch instruction, not event context.
+ */
+async function withDescription(details) {
+  const { detailUrl, ...rest } = details;
+  if (!detailUrl) return rest;
+  let url;
+  try {
+    url = new URL(detailUrl);
+  } catch {
+    return rest;
+  }
+  if (url.protocol !== "https:" || !LUMA_HOSTS.has(url.hostname)) return rest;
+
+  try {
+    const response = await fetch(url.href, {
+      credentials: "omit",
+      signal: AbortSignal.timeout(DESCRIPTION_FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) return rest;
+    const description = LumaDescription.extractLumaDescription(await response.text());
+    return description ? { ...rest, description } : rest;
+  } catch {
+    return rest;
+  }
+}
+
+/** `details`: `{ title, when, where, price, tags, detailUrl? }` from the page's site adapter. */
+async function scoreEvent(rawDetails) {
   const birthdate = await Storage.loadBirthdate();
   if (!birthdate) {
     return { kind: "no-birthdate", reason: REASON_FOR_KIND["no-birthdate"] };
   }
+  const details = await withDescription(rawDetails);
 
   try {
     const natal = Natal.computeNatalChart(birthdate);

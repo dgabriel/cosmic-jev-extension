@@ -12,8 +12,9 @@
  *  - state carries the full natal + transit positions for all 7 bodies (not
  *    just the pre-selected ruling body) and the full aspect list (not
  *    filtered to just that body), plus whatever event details (when/where/
- *    price/tags) the page actually had -- Jev gets the whole chart and the
- *    whole event, not a pre-narrowed slice of either.
+ *    price/tags, plus the full description for Luma events -- see
+ *    background.js's `withDescription`) the page actually had -- Jev gets
+ *    the whole chart and the whole event, not a pre-narrowed slice of either.
  *  - `category` is deliberately NOT sent to Call 2: Call 1 already picked
  *    one for our own routing (see background.js's `route()`), but Call 2
  *    doesn't hint Jev toward it -- it has to find its own relevance in the

@@ -35,6 +35,12 @@
  * Scored the same way as an event: the calendar's name is the activity
  * text, its description (if present) goes in `tags` since it's the closest
  * fit and gives Jev real context beyond the bare name.
+ *
+ * Event cards never show the event's own description, so each event's
+ * details also carry `detailUrl` (the event link's absolute href):
+ * background.js fetches that page and adds the description before asking
+ * Jev (see lumaDescription.js). Calendar cards don't need it -- their
+ * description is already on the card.
  */
 (function () {
   "use strict";
@@ -96,7 +102,7 @@
     const where =
       divs.find((text) => text !== title && !/^by\s+/i.test(text) && !STATUS_WORDS.has(text) && text !== "​") || null;
 
-    return { title, when, where, price: null, tags: null };
+    return { title, when, where, price: null, tags: null, detailUrl: link.href || null };
   }
 
   window.CosmicJevAdapter = { findCards, detailsFor };
