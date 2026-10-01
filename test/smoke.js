@@ -128,6 +128,23 @@ function checkRange(name, actual, min, maxExclusive) {
   check("luma: full description from __NEXT_DATA__, one line per block", extractLumaDescription(page), "Wine and poker night.\nWhat to expect:\nCards");
   check("luma: falls back to the meta description", extractLumaDescription(`<meta name="description" content="Wine &amp; poker &quot;night&quot;…">`), 'Wine & poker "night"…');
   check("luma: null when the page has neither", extractLumaDescription("<html></html>"), null);
+  const calendarPage = (data) =>
+    `<meta name="description" content="View and follow events from X on Luma."><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: { initialData: { data } } } })}</script>`;
+  check(
+    "luma: calendar page -> tagline plus upcoming event names",
+    extractLumaDescription(
+      calendarPage({
+        calendar: { name: "The New York Philosophy Club", description_short: "Pursuing wisdom, together." },
+        upcoming: { entries: [{ event: { name: "Philosophy at the Museum: South Asian Art" } }, { event: { name: "Midtown East" } }] },
+      }),
+    ),
+    "Pursuing wisdom, together.\nUpcoming events: Philosophy at the Museum: South Asian Art; Midtown East",
+  );
+  check(
+    "luma: an event page without a description doesn't borrow its host calendar's",
+    extractLumaDescription(calendarPage({ calendar: { description_short: "Host tagline" }, event: { name: "E" } })),
+    "View and follow events from X on Luma.",
+  );
   const longPage = `<meta name="description" content="${"x".repeat(5000)}">`;
   check("luma: long descriptions are capped", extractLumaDescription(longPage).length, MAX_DESCRIPTION_CHARS);
 }

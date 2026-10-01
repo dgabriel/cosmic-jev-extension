@@ -36,11 +36,14 @@
  * text, its description (if present) goes in `tags` since it's the closest
  * fit and gives Jev real context beyond the bare name.
  *
- * Event cards never show the event's own description, so each event's
- * details also carry `detailUrl` (the event link's absolute href):
- * background.js fetches that page and adds the description before asking
- * Jev (see lumaDescription.js). Calendar cards don't need it -- their
- * description is already on the card.
+ * Event cards never show the event's own description, so each card's
+ * details also carry `detailUrl` (the card's absolute link): background.js
+ * fetches that page and adds the description before asking Jev (see
+ * lumaDescription.js). Calendar cards get it too: their on-card blurb is
+ * often missing or just a tagline, and the calendar page lists the club's
+ * upcoming events, which say far more about what it does. Calendar details
+ * also carry `kind: "calendar"` so the activity Jev is asked about reads as
+ * joining a community, not attending one event (see oracleClient.js).
  */
 (function () {
   "use strict";
@@ -75,7 +78,15 @@
     const where = spans[0] || null;
     const description = spans.length > 1 ? spans[spans.length - 1] : null;
 
-    return { title, when: null, where, price: null, tags: description && description !== where ? [description] : null };
+    return {
+      title,
+      when: null,
+      where,
+      price: null,
+      tags: description && description !== where ? [description] : null,
+      kind: "calendar",
+      detailUrl: card.href || null,
+    };
   }
 
   function detailsFor(card) {

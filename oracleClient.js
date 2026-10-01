@@ -81,6 +81,32 @@
     "The stars strongly favor this",
   ];
 
+  /**
+   * The event as Jev sees it, in both calls. Measured live (2026-10-01, "The
+   * New York Philosophy Club" calendar card): a bare organizer/event name
+   * isn't an *activity*, so the vague Noul ("Is this activity description
+   * too vague...?") scored it 0.58 even as plain text, and the old raw card
+   * object with `when/price/tags: null` pushed it to 0.82 -- empty fields
+   * read as missing information. Phrasing it as something the user would do
+   * ("Go to a ... discussion night") dropped it to 0.29, and adding a real
+   * description to 0.23. So: lead with an `activity` sentence, then only the
+   * fields the page actually had.
+   */
+  function eventState(details) {
+    const { kind, ...rest } = details;
+    const activity =
+      kind === "calendar"
+        ? `Joining a recurring community or club and going to its events: "${details.title}"`
+        : `Attending this event: "${details.title}"`;
+    const state = { activity };
+    for (const [key, value] of Object.entries(rest)) {
+      if (value === null || value === undefined || value === "") continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+      state[key] = value;
+    }
+    return state;
+  }
+
   function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
   }
@@ -110,10 +136,10 @@
     return json.answers;
   }
 
-  /** `details`: `{ title, when, where, price, tags }`, whatever the page's adapter could find. */
+  /** `details`: `{ title, when, where, price, tags, description?, kind? }`, whatever the page's adapter could find. */
   async function classifyActivity(details) {
     const answers = await decide({
-      state: details,
+      state: eventState(details),
       questions: {
         category: { type: "choice", instructions: "Which celestial body rules this activity?", criteria: CATEGORY_CRITERIA },
         sensitivity: {
@@ -148,7 +174,7 @@
   async function getVerdict(input) {
     const answers = await decide({
       state: {
-        event: input.event,
+        event: eventState(input.event),
         natal: input.natal,
         transits: input.transits,
         aspects: input.aspects,

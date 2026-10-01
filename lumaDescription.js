@@ -1,20 +1,26 @@
 /**
- * Pulls a Luma event's description out of its event page's HTML, so Jev can
- * judge the event on what it actually is, not just its title. Luma's listing
- * cards (city pages, /discover) never show the description, so
- * background.js fetches the event page itself (host_permissions cover
+ * Pulls a Luma event's (or calendar's) description out of its page's HTML,
+ * so Jev can judge it on what it actually is, not just its title. Luma's
+ * listing cards (city pages, /discover) never show an event's description,
+ * so background.js fetches the page itself (host_permissions cover
  * lu.ma/luma.com) and hands the HTML here.
  *
- * Two sources, verified against live event pages (luma.com/warp-yb7x,
- * luma.com/juntodinnersep30, 2026-09-30):
- *  1. The page's Next.js `__NEXT_DATA__` JSON, at
- *     props.pageProps.initialData.data.description_mirror -- the full
- *     description as a ProseMirror-style doc ({type, content[], text}).
- *     Preferred: it's complete. It's also Luma's internal page data, not a
- *     public API, so it can change without notice -- hence the fallback.
- *  2. `<meta name="description">`, which Luma truncates to ~200 chars with
- *     "…", and omits entirely on some events.
- * Returns null when neither is there. Plain string parsing (no DOMParser):
+ * Sources, verified against live pages (events luma.com/warp-yb7x and
+ * luma.com/juntodinnersep30, calendars luma.com/philosophy and
+ * luma.com/bkrun, 2026-09-30/10-01), all in the page's Next.js
+ * `__NEXT_DATA__` JSON under props.pageProps.initialData.data:
+ *  1. Event page: `description_mirror` -- the full description as a
+ *     ProseMirror-style doc ({type, content[], text}).
+ *  2. Calendar page (a recurring club/organizer, e.g. "The New York
+ *     Philosophy Club"): `calendar.description_short` is often just a
+ *     tagline ("Pursuing wisdom, together."), so the names of its next few
+ *     `upcoming.entries[].event` are appended -- they're what actually say
+ *     what the club does ("Philosophy at the Museum: South Asian Art").
+ *  3. Fallback: `<meta name="description">`, which Luma truncates to ~200
+ *     chars with "…" and omits on some events.
+ * `__NEXT_DATA__` is Luma's internal page data, not a public API, so it can
+ * change without notice -- hence the fallback.
+ * Returns null when none of these is there. Plain string parsing (no DOMParser):
  * MV3 service workers don't have one.
  */
 (function (root) {
@@ -23,6 +29,7 @@
   /** Plenty for Jev to get the gist; keeps one wordy event from bloating the request. */
   const MAX_DESCRIPTION_CHARS = 2000;
   const BLOCK_TYPES = new Set(["paragraph", "heading", "list_item", "blockquote", "code_block"]);
+  const MAX_UPCOMING_EVENTS = 5;
 
   function flattenDoc(node) {
     if (!node || typeof node !== "object") return "";
@@ -36,12 +43,28 @@
     if (!match) return null;
     try {
       const data = JSON.parse(match[1]);
-      const doc = data && data.props && data.props.pageProps && data.props.pageProps.initialData &&
-        data.props.pageProps.initialData.data && data.props.pageProps.initialData.data.description_mirror;
-      return doc ? flattenDoc(doc) : null;
+      const page = data && data.props && data.props.pageProps && data.props.pageProps.initialData &&
+        data.props.pageProps.initialData.data;
+      if (!page) return null;
+      if (page.description_mirror) return flattenDoc(page.description_mirror);
+      // Event pages carry a `calendar` too (the host's), but only calendar pages have `upcoming`.
+      if (page.calendar && page.upcoming) return calendarSummary(page);
+      return null;
     } catch {
       return null;
     }
+  }
+
+  function calendarSummary(page) {
+    const lines = [];
+    if (typeof page.calendar.description_short === "string") lines.push(page.calendar.description_short);
+    const entries = page.upcoming && Array.isArray(page.upcoming.entries) ? page.upcoming.entries : [];
+    const names = entries
+      .map((entry) => entry && entry.event && entry.event.name)
+      .filter((name) => typeof name === "string" && name.trim() !== "")
+      .slice(0, MAX_UPCOMING_EVENTS);
+    if (names.length > 0) lines.push(`Upcoming events: ${names.join("; ")}`);
+    return lines.join("\n");
   }
 
   function decodeEntities(text) {
